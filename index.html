@@ -80,7 +80,7 @@
                             </div>
                         </div>
                         
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
                             <button id="share-x" class="flex items-center justify-center w-full bg-black text-white font-bold py-3 px-4 rounded-lg hover:bg-gray-800 transition-colors duration-300">
                                 <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 16 16"><path d="M9.29 6.855L14.747.15h-1.328L8.98 6.03L5.52 0H.5l5.812 8.45L.5 16h1.328l4.823-5.873L10.48 16h5.02L9.29 6.855zM7.42 8.44L6.9 7.72l-4.47-6.42h2.16l3.58 5.12l.5.71l4.72 6.75h-2.16L7.42 8.44z"/></svg>
                                 Share on X
@@ -88,6 +88,10 @@
                             <button id="share-facebook" class="flex items-center justify-center w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-300">
                                 <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 16 16"><path d="M16 8.049c0-4.446-3.582-8.05-8-8.05C3.58 0 0 3.603 0 8.05C0 12.006 2.923 15.11 6.75 15.969V10.398h-2V8.05h2V6.275c0-2.017 1.195-3.131 3.022-3.131.876 0 1.791.157 1.791.157v1.98h-1.009c-.993 0-1.303.621-1.303 1.258v1.51h2.218l-.354 2.348H9.25V15.97C13.077 15.11 16 12.006 16 8.049z"/></svg>
                                 Share on Facebook
+                            </button>
+                            <button id="share-linkedin" class="flex items-center justify-center w-full bg-blue-700 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-800 transition-colors duration-300">
+                                <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 16 16"><path d="M0 1.146C0 .513.526 0 1.175 0h13.65C15.474 0 16 .513 16 1.146v13.708c0 .633-.526 1.146-1.175 1.146H1.175C.526 16 0 15.487 0 14.854V1.146zm4.943 12.248V6.169H2.542v7.225h2.401zm-1.2-8.212c.837 0 1.358-.554 1.358-1.248-.015-.709-.52-1.248-1.342-1.248-.822 0-1.359.54-1.359 1.248 0 .694.521 1.248 1.327 1.248h.016zm4.908 8.212V9.359c0-.216.016-.432.08-.586.173-.431.568-.878 1.232-.878.869 0 1.216.662 1.216 1.634v3.865h2.401V9.25c0-2.22-1.184-3.252-2.764-3.252-1.274 0-1.845.7-2.165 1.193v.025h-.016a5.54 5.54 0 0 1 .016-.025V6.169h-2.4c.03.678 0 7.225 0 7.225h2.4z"/></svg>
+                                Share on LinkedIn
                             </button>
                         </div>
                     </div>
@@ -124,14 +128,14 @@
         const aiHashtags = document.getElementById('ai-hashtags');
         const shareXBtn = document.getElementById('share-x');
         const shareFacebookBtn = document.getElementById('share-facebook');
+        const shareLinkedInBtn = document.getElementById('share-linkedin'); // NEW
 
         let articles = [];
         let currentArticle = null;
         let selectedArticleElement = null;
 
-        // UPDATED: Fetch news from the single, main RSS feed
         async function fetchNews() {
-            newsList.innerHTML = ''; // Clear previous list
+            newsList.innerHTML = ''; 
             newsLoader.style.display = 'flex';
 
             const rssFeedUrl = 'https://cointelegraph.com/rss';
@@ -159,11 +163,22 @@
                 const articleEl = document.createElement('div');
                 articleEl.className = 'headline-item flex items-center space-x-4 p-3 bg-slate-800 rounded-lg cursor-pointer border-2 border-transparent transition-all duration-300';
                 const author = article.author || 'Cointelegraph';
+                const pubDate = new Date(article.pubDate);
+                const formattedDate = pubDate.toLocaleString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                });
+
                 articleEl.innerHTML = `
                     <img src="${article.thumbnail || 'https://via.placeholder.com/100'}" alt="Article thumbnail" class="w-20 h-20 rounded-md object-cover flex-shrink-0">
                     <div>
                         <h3 class="font-bold text-md leading-tight">${article.title}</h3>
                         <p class="text-sm text-slate-400 mt-1">${author}</p>
+                        <p class="text-xs text-slate-500 mt-1">${formattedDate}</p>
                     </div>
                 `;
                 articleEl.addEventListener('click', () => handleArticleClick(index, articleEl));
@@ -234,8 +249,13 @@
             const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(currentArticle.link)}&quote=${encodeURIComponent(aiHeadline.textContent + '\n\n' + aiDescription.textContent)}`;
             window.open(url, '_blank');
         });
+        
+        // NEW: LinkedIn Share Function
+        shareLinkedInBtn.addEventListener('click', () => {
+            const url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(currentArticle.link)}`;
+            window.open(url, '_blank');
+        });
 
-        // Initial load
         fetchNews();
     </script>
 </body>
