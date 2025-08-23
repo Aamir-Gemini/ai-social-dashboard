@@ -122,13 +122,12 @@
         const placeholder = document.getElementById('placeholder');
         const aiLoaderOverlay = document.getElementById('ai-loader-overlay');
         const generatedPost = document.getElementById('generated-post');
-        const aiImage = document.getElementById('ai-image');
         const aiHeadline = document.getElementById('ai-headline');
         const aiDescription = document.getElementById('ai-description');
         const aiHashtags = document.getElementById('ai-hashtags');
         const shareXBtn = document.getElementById('share-x');
         const shareFacebookBtn = document.getElementById('share-facebook');
-        const shareLinkedInBtn = document.getElementById('share-linkedin'); // NEW
+        const shareLinkedInBtn = document.getElementById('share-linkedin');
 
         let articles = [];
         let currentArticle = null;
@@ -137,7 +136,6 @@
         async function fetchNews() {
             newsList.innerHTML = ''; 
             newsLoader.style.display = 'flex';
-
             const rssFeedUrl = 'https://cointelegraph.com/rss';
             const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssFeedUrl)}`;
             try {
@@ -164,15 +162,7 @@
                 articleEl.className = 'headline-item flex items-center space-x-4 p-3 bg-slate-800 rounded-lg cursor-pointer border-2 border-transparent transition-all duration-300';
                 const author = article.author || 'Cointelegraph';
                 const pubDate = new Date(article.pubDate);
-                const formattedDate = pubDate.toLocaleString('en-US', {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: true
-                });
-
+                const formattedDate = pubDate.toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
                 articleEl.innerHTML = `
                     <img src="${article.thumbnail || 'https://via.placeholder.com/100'}" alt="Article thumbnail" class="w-20 h-20 rounded-md object-cover flex-shrink-0">
                     <div>
@@ -238,23 +228,33 @@
             aiHashtags.textContent = content.hashtags.join(' ');
             generatedPost.classList.remove('hidden');
         }
-
-        shareXBtn.addEventListener('click', () => {
-            const text = `${aiHeadline.textContent}\n\n${aiDescription.textContent}\n\n${aiHashtags.textContent}`;
-            const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(currentArticle.link)}`;
-            window.open(url, '_blank');
-        });
-
-        shareFacebookBtn.addEventListener('click', () => {
-            const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(currentArticle.link)}&quote=${encodeURIComponent(aiHeadline.textContent + '\n\n' + aiDescription.textContent)}`;
-            window.open(url, '_blank');
-        });
         
-        // NEW: LinkedIn Share Function
-        shareLinkedInBtn.addEventListener('click', () => {
-            const url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(currentArticle.link)}`;
+        // UPDATED: Added safety check for sharing functions
+        function share(platform) {
+            if (!currentArticle || !currentArticle.link) {
+                alert("Please select an article first.");
+                return;
+            }
+            let url = '';
+            const text = `${aiHeadline.textContent}\n\n${aiDescription.textContent}\n\n${aiHashtags.textContent}`;
+            
+            switch(platform) {
+                case 'x':
+                    url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(currentArticle.link)}`;
+                    break;
+                case 'facebook':
+                    url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(currentArticle.link)}&quote=${encodeURIComponent(aiHeadline.textContent + '\n\n' + aiDescription.textContent)}`;
+                    break;
+                case 'linkedin':
+                    url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(currentArticle.link)}`;
+                    break;
+            }
             window.open(url, '_blank');
-        });
+        }
+
+        shareXBtn.addEventListener('click', () => share('x'));
+        shareFacebookBtn.addEventListener('click', () => share('facebook'));
+        shareLinkedInBtn.addEventListener('click', () => share('linkedin'));
 
         fetchNews();
     </script>
