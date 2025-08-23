@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Social Media News Dashboard</title>
+    <title>AI Crypto News Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -24,14 +24,14 @@
     <div class="container mx-auto p-4 sm:p-6 lg:p-8">
         <header class="text-center mb-10">
             <h1 class="text-4xl md:text-5xl font-bold bg-gradient-to-r from-sky-400 to-cyan-300 bg-clip-text text-transparent">
-                AI Social News Dashboard
+                AI Crypto News Dashboard
             </h1>
-            <p class="text-slate-400 mt-2 text-lg">Select a headline, and let AI craft the perfect social media post.</p>
+            <p class="text-slate-400 mt-2 text-lg">Bitcoin News from Cointelegraph | Powered by AI</p>
         </header>
 
         <main class="grid grid-cols-1 lg:grid-cols-5 gap-8">
             <div class="lg:col-span-2 bg-slate-800/50 rounded-xl shadow-2xl p-6 ring-1 ring-white/10">
-                <h2 class="text-2xl font-bold mb-4 border-b border-slate-700 pb-3">Top Headlines</h2>
+                <h2 class="text-2xl font-bold mb-4 border-b border-slate-700 pb-3">Latest Bitcoin Headlines</h2>
                 <div id="news-list" class="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
                     <div id="news-loader" class="flex justify-center items-center h-60">
                         <div class="loader"></div>
@@ -80,7 +80,7 @@
 
     <script>
         // --- START OF CONFIGURATION ---
-        const GNEWS_API_KEY = 'PASTE_YOUR_GNEWS_API_KEY_HERE';
+        // ❗️ GNews API Key is no longer needed. Make sure your Gemini Key is correct.
         const GEMINI_API_KEY = 'PASTE_YOUR_GOOGLE_AI_API_KEY_HERE';
         // --- END OF CONFIGURATION ---
 
@@ -102,32 +102,43 @@
         let currentArticle = null;
         let selectedArticleElement = null;
 
+        // NEW: Function to fetch news from the Cointelegraph RSS feed
         async function fetchNews() {
             newsLoader.style.display = 'flex';
-            const url = `https://gnews.io/api/v4/top-headlines?category=general&lang=en&country=us&max=10&apikey=${GNEWS_API_KEY}`;
+            // We use the rss2json API to convert the XML RSS feed into easy-to-use JSON
+            const rssFeedUrl = 'https://cointelegraph.com/rss/tag/bitcoin';
+            const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssFeedUrl)}`;
+            
             try {
-                const response = await fetch(url);
+                const response = await fetch(apiUrl);
                 if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
                 const data = await response.json();
-                articles = data.articles;
+                
+                // The structure is data.items instead of data.articles
+                articles = data.items;
                 displayNews(articles);
             } catch (error) {
-                newsList.innerHTML = `<p class="text-red-400 p-4">Error fetching news. Check your GNews API key. (${error.message})</p>`;
+                newsList.innerHTML = `<p class="text-red-400 p-4">Error fetching news. The RSS feed may be down. (${error.message})</p>`;
             } finally {
                 newsLoader.style.display = 'none';
             }
         }
 
+        // UPDATED: Function to display news from the new source
         function displayNews(newsArticles) {
             newsList.innerHTML = '';
             newsArticles.forEach((article, index) => {
                 const articleEl = document.createElement('div');
                 articleEl.className = 'flex items-center space-x-4 p-3 bg-slate-800 rounded-lg cursor-pointer hover:bg-slate-700 border-2 border-transparent transition-colors duration-300';
+                
+                // Extracting author from the new data structure
+                const author = article.author || 'Cointelegraph';
+
                 articleEl.innerHTML = `
-                    <img src="${article.image || 'https://via.placeholder.com/100'}" alt="Article thumbnail" class="w-20 h-20 rounded-md object-cover flex-shrink-0">
+                    <img src="${article.thumbnail || 'https://via.placeholder.com/100'}" alt="Article thumbnail" class="w-20 h-20 rounded-md object-cover flex-shrink-0">
                     <div>
                         <h3 class="font-bold text-md leading-tight">${article.title}</h3>
-                        <p class="text-sm text-slate-400 mt-1">${article.source.name}</p>
+                        <p class="text-sm text-slate-400 mt-1">${author}</p>
                     </div>
                 `;
                 articleEl.addEventListener('click', () => handleArticleClick(index, articleEl));
@@ -135,6 +146,7 @@
             });
         }
 
+        // UPDATED: Handle click to pass the correct data to the AI
         function handleArticleClick(index, element) {
             if (selectedArticleElement) {
                 selectedArticleElement.classList.remove('selected-article');
@@ -146,19 +158,28 @@
             placeholder.style.display = 'none';
             generatedPost.classList.add('hidden');
             aiLoaderOverlay.style.display = 'flex';
-            generateSocialContent(currentArticle.title, currentArticle.description);
+
+            // The RSS feed 'description' contains HTML, so we need to clean it for the AI prompt
+            const tempDiv = document.createElement("div");
+            tempDiv.innerHTML = currentArticle.description;
+            const cleanDescription = tempDiv.textContent || tempDiv.innerText || "";
+            // We'll take the first 400 characters to keep the prompt clean
+            const descriptionSnippet = cleanDescription.substring(0, 400);
+
+            generateSocialContent(currentArticle.title, descriptionSnippet);
         }
 
         async function generateSocialContent(title, description) {
              const prompt = `
-                Based on the following news article, generate a social media post.
+                Analyze the following crypto news article and generate a social media post for X (formerly Twitter).
+                The topic is Bitcoin.
                 Article Title: "${title}"
-                Article Description: "${description}"
+                Article Content Snippet: "${description}"
 
                 Provide the output as a clean JSON object with three keys: "catchy_headline", "post_description", and "hashtags".
-                - "catchy_headline": An engaging headline, different from the original.
-                - "post_description": A concise summary for a social media post (2-3 sentences max).
-                - "hashtags": An array of 5 relevant hashtags (e.g., ["#Technology", "#Innovation"]).
+                - "catchy_headline": A very engaging, short headline for social media.
+                - "post_description": A concise summary for the post (2-3 sentences max).
+                - "hashtags": An array of 5 relevant crypto hashtags, including #Bitcoin.
             `;
 
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
@@ -184,7 +205,7 @@
         }
 
         function updateDashboard(content) {
-            aiImage.src = currentArticle.image || 'https://via.placeholder.com/600x400';
+            aiImage.src = currentArticle.thumbnail || 'https://via.placeholder.com/600x400';
             aiHeadline.textContent = content.catchy_headline;
             aiDescription.textContent = content.post_description;
             aiHashtags.textContent = content.hashtags.join(' ');
@@ -193,12 +214,12 @@
 
         shareXBtn.addEventListener('click', () => {
             const text = `${aiHeadline.textContent}\n\n${aiDescription.textContent}\n\n${aiHashtags.textContent}`;
-            const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(currentArticle.url)}`;
+            const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(currentArticle.link)}`;
             window.open(url, '_blank');
         });
 
         shareFacebookBtn.addEventListener('click', () => {
-            const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(currentArticle.url)}&quote=${encodeURIComponent(aiHeadline.textContent + '\n\n' + aiDescription.textContent)}`;
+            const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(currentArticle.link)}&quote=${encodeURIComponent(aiHeadline.textContent + '\n\n' + aiDescription.textContent)}`;
             window.open(url, '_blank');
         });
 
