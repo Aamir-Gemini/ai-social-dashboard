@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Crypto News Dashboard</title>
+    <title>AI News Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -33,6 +33,14 @@
             border-color: #38bdf8 !important; 
             box-shadow: 0 0 15px rgba(56, 189, 248, 0.3);
         }
+        .category-btn {
+            transition: all 0.3s ease;
+        }
+        .category-btn.active {
+            background-color: #38bdf8;
+            color: #0f172a;
+            font-weight: 700;
+        }
     </style>
 </head>
 <body class="bg-slate-900 text-gray-200 min-h-screen">
@@ -40,25 +48,28 @@
     <div class="container mx-auto p-4 sm:p-6 lg:p-8">
         <header class="text-center mb-10">
             <h1 class="text-4xl md:text-5xl font-bold bg-gradient-to-r from-sky-400 to-cyan-300 bg-clip-text text-transparent">
-                AI Crypto News Dashboard
+                AI News Dashboard
             </h1>
-            <p class="text-slate-400 mt-2 text-lg">Crypto News from Cointelegraph | Powered by AI</p>
+            <p class="text-slate-400 mt-2 text-lg">Your Curated Feed | Powered by AI</p>
         </header>
 
         <main class="grid grid-cols-1 lg:grid-cols-5 gap-8">
-            <!-- News Feed Column -->
             <div class="lg:col-span-2 card rounded-xl shadow-2xl p-6">
-                <div class="border-b border-slate-700 pb-3 mb-4">
-                    <h2 class="text-2xl font-bold">Latest Crypto Headlines</h2>
+                <div class="flex flex-col sm:flex-row items-center justify-between border-b border-slate-700 pb-3 mb-4 gap-4">
+                    <h2 class="text-2xl font-bold">Top 3 Headlines</h2>
+                    <div id="category-selector" class="flex-shrink-0 flex space-x-1 bg-slate-800 p-1 rounded-lg">
+                        <button class="category-btn px-3 py-1 text-sm rounded-md active" data-category="crypto">Crypto</button>
+                        <button class="category-btn px-3 py-1 text-sm rounded-md" data-category="techcrunch">TechCrunch</button>
+                        <button class="category-btn px-3 py-1 text-sm rounded-md" data-category="arstechnica">Ars Technica</button>
+                    </div>
                 </div>
-                <div id="news-list" class="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+                <div id="news-list" class="space-y-4">
                     <div id="news-loader" class="flex justify-center items-center h-60">
                         <div class="loader"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- AI Content Generator Column -->
             <div class="lg:col-span-3 card rounded-xl shadow-2xl p-6">
                 <h2 class="text-2xl font-bold mb-4 border-b border-slate-700 pb-3">AI Generated Post</h2>
                 <div id="ai-content-area" class="relative">
@@ -107,7 +118,7 @@
                     <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 16 16"><path d="M9.29 6.855L14.747.15h-1.328L8.98 6.03L5.52 0H.5l5.812 8.45L.5 16h1.328l4.823-5.873L10.48 16h5.02L9.29 6.855zM7.42 8.44L6.9 7.72l-4.47-6.42h2.16l3.58 5.12l.5.71l4.72 6.75h-2.16L7.42 8.44z"/></svg>
                 </a>
                 <a href="https://youtube.com/@10solup" target="_blank" class="text-slate-500 hover:text-sky-400 transition-colors">
-                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 16 16"><path d="M8.051 1.999a.764.764 0 0 0-.764-.764A.764.764 0 0 0 6.525 2H3.439a.764.764 0 0 0-.764.764v10.486c0 .42.344.764.764.764h10.486a.764.764 0 0 0 .764-.764V6.439a.764.764 0 0 0-.764-.764h-3.065a.764.764 0 0 0-.764.764v3.066c0 .42.344.764.764.764h3.065a.764.764 0 0 0 .764-.764V6.439a.764.764 0 0 0-.764-.764H8.051V1.999z M6.002 14.327a.764.764 0 0 1-.764-.764V6.439a.764.764 0 0 1 .764-.764h1.285a.764.764 0 0 1 .764.764v7.124a.764.764 0 0 1-.764.764H6.002z"/></svg>
+                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 16 16"><path d="M8.051 1.999a.764.764 0 0 0-.764-.764A.764.764 0 0 0 6.525 2H3.439a.764.764 0 0 0-.764.764v10.486c0 .42.344.764.764.764h10.486a.764.764 0 0 0 .764-.764V6.439a.764.764 0 0 0-.764-.764h--3.065a.764.764 0 0 0-.764.764v3.066c0 .42.344.764.764.764h3.065a.764.764 0 0 0 .764-.764V6.439a.764.764 0 0 0-.764-.764H8.051V1.999z M6.002 14.327a.764.764 0 0 1-.764-.764V6.439a.764.764 0 0 1 .764-.764h1.285a.764.764 0 0 1 .764.764v7.124a.764.764 0 0 1-.764.764H6.002z"/></svg>
                 </a>
             </div>
         </footer>
@@ -116,10 +127,17 @@
     <script>
         // --- START OF CONFIGURATION ---
         const GEMINI_API_KEY = 'AIzaSyC7Pm-NgKYi1WIvpAw-pbSNvtqa4lRy7Ts';
+        
+        const RSS_FEEDS = {
+            crypto: 'https://cointelegraph.com/rss',
+            techcrunch: 'https://techcrunch.com/rss',
+            arstechnica: 'http://feeds.arstechnica.com/arstechnica/index/'
+        };
         // --- END OF CONFIGURATION ---
 
         const newsList = document.getElementById('news-list');
         const newsLoader = document.getElementById('news-loader');
+        const categorySelector = document.getElementById('category-selector');
         const placeholder = document.getElementById('placeholder');
         const aiLoaderOverlay = document.getElementById('ai-loader-overlay');
         const generatedPost = document.getElementById('generated-post');
@@ -134,19 +152,26 @@
         let currentArticle = null;
         let selectedArticleElement = null;
 
-        async function fetchNews() {
+        async function fetchNews(category) {
             newsList.innerHTML = ''; 
             newsLoader.style.display = 'flex';
-            const rssFeedUrl = 'https://cointelegraph.com/rss';
+            placeholder.style.display = 'block';
+            generatedPost.classList.add('hidden');
+
+            const rssFeedUrl = RSS_FEEDS[category];
             const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssFeedUrl)}`;
             try {
                 const response = await fetch(apiUrl);
                 if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
                 const data = await response.json();
-                articles = data.items;
+                
+                // Only take the top 3 articles
+                articles = data.items.slice(0, 3);
+                
                 displayNews(articles);
-            } catch (error) {
-                newsList.innerHTML = `<p class="text-red-400 p-4">Error fetching news. The RSS feed may be down. (${error.message})</p>`;
+            } catch (error)
+            {
+                newsList.innerHTML = `<p class="text-red-400 p-4">Error fetching news. (${error.message})</p>`;
             } finally {
                 newsLoader.style.display = 'none';
             }
@@ -161,7 +186,7 @@
             newsArticles.forEach((article, index) => {
                 const articleEl = document.createElement('div');
                 articleEl.className = 'headline-item flex items-center space-x-4 p-3 bg-slate-800 rounded-lg cursor-pointer border-2 border-transparent transition-all duration-300';
-                const author = article.author || 'Cointelegraph';
+                const author = article.author || 'N/A';
                 const pubDate = new Date(article.pubDate);
                 const formattedDate = pubDate.toLocaleString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
                 articleEl.innerHTML = `
@@ -189,19 +214,19 @@
             aiLoaderOverlay.style.display = 'flex';
             const tempDiv = document.createElement("div");
             tempDiv.innerHTML = currentArticle.description;
-            const cleanDescription = (tempDiv.textContent || tempDiv.innerText || "").substring(0, 400);
+            const cleanDescription = (tempDiv.textContent || tempDiv.innerText || "").substring(0, 500);
             generateSocialContent(currentArticle.title, cleanDescription);
         }
 
         async function generateSocialContent(title, description) {
              const prompt = `
-                Analyze the following crypto news article and generate a social media post for X (formerly Twitter).
+                Analyze the following news article and generate a social media post for X (formerly Twitter).
                 Article Title: "${title}"
                 Article Content Snippet: "${description}"
                 Provide the output as a clean JSON object with three keys: "catchy_headline", "post_description", and "hashtags".
                 - "catchy_headline": An engaging, short headline for social media.
                 - "post_description": A concise summary for the post (2-3 sentences max).
-                - "hashtags": An array of 5 relevant crypto hashtags like #crypto, #blockchain, etc.
+                - "hashtags": An array of 5 relevant hashtags for the topic.
             `;
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
             try {
@@ -219,7 +244,7 @@
                 const content = JSON.parse(jsonString);
                 updateDashboard(content);
             } catch (error) {
-                document.getElementById('ai-content-area').innerHTML = `<p class="text-red-400 p-4">Error generating content. Check your Google AI API key. (${error.message})</p>`;
+                document.getElementById('ai-content-area').innerHTML = `<p class="text-red-400 p-4">Error generating content. (${error.message})</p>`;
             } finally {
                 aiLoaderOverlay.style.display = 'none';
             }
@@ -254,11 +279,20 @@
             window.open(url, '_blank');
         }
 
+        categorySelector.addEventListener('click', (e) => {
+            if (e.target.tagName === 'BUTTON' && !e.target.classList.contains('active')) {
+                document.querySelector('.category-btn.active').classList.remove('active');
+                e.target.classList.add('active');
+                const category = e.target.dataset.category;
+                fetchNews(category);
+            }
+        });
+
         shareXBtn.addEventListener('click', () => share('x'));
         shareFacebookBtn.addEventListener('click', () => share('facebook'));
         shareLinkedInBtn.addEventListener('click', () => share('linkedin'));
 
-        fetchNews();
+        fetchNews('crypto');
     </script>
 </body>
 </html>
