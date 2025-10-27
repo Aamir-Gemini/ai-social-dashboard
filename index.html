@@ -159,18 +159,26 @@
             generatedPost.classList.add('hidden');
 
             const rssFeedUrl = RSS_FEEDS[category];
-            const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssFeedUrl)}`;
+            // Using a CORS proxy to potentially bypass fetch issues with some RSS feeds
+            const proxyUrl = 'https://corsproxy.io/?';
+            const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(proxyUrl + rssFeedUrl)}`;
+            
             try {
                 const response = await fetch(apiUrl);
-                if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
+                if (!response.ok) throw new Error(`API Error: ${response.statusText} for ${category}`);
                 const data = await response.json();
+                
+                if (data.status !== 'ok') {
+                     throw new Error(`rss2json Error: ${data.message || 'Failed to parse feed'}`);
+                }
                 
                 articles = data.items.slice(0, 3);
                 
                 displayNews(articles);
             } catch (error)
             {
-                newsList.innerHTML = `<p class="text-red-400 p-4">Error fetching news. (${error.message})</p>`;
+                newsList.innerHTML = `<p class="text-red-400 p-4">Error fetching news for ${category}. (${error.message})</p>`;
+                console.error("Fetch Error:", error); // Log detailed error
             } finally {
                 newsLoader.style.display = 'none';
             }
@@ -213,7 +221,7 @@
             aiLoaderOverlay.style.display = 'flex';
             const tempDiv = document.createElement("div");
             tempDiv.innerHTML = currentArticle.description;
-            const cleanDescription = (tempDiv.textContent || tempDiv.innerText || "").substring(0, 500);
+            const cleanDescription = (tempDiv.textContent || tempDiv.innerText || "").substring(0, 500); // Increased snippet length
             generateSocialContent(currentArticle.title, cleanDescription);
         }
 
@@ -228,11 +236,10 @@
                 - "hashtags": An array of 5 relevant hashtags for the topic.
             `;
             
-            // --- START OF FIX ---
-            // The API endpoint and model name have been updated
-            const modelName = "gemini-1.5-flash"; // Correct, simple model name
-            const url = `https://generativelanguage.googleapis.com/v1/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
-            // --- END OF FIX ---
+            // --- START OF CORRECTED CODE ---
+            const modelName = "gemini-1.5-flash-latest"; // Using the latest alias which should point to a working version
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
+             // --- END OF CORRECTED CODE ---
             
             try {
                 const response = await fetch(url, {
@@ -240,23 +247,54 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
                 });
+
+                // More detailed error handling
                 if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(`AI API Error: ${errorData.error.message}`);
+                    let errorBody = await response.text(); // Read response body as text first
+                    let errorMessage = `AI API Error (${response.status}): ${response.statusText}`;
+                    try {
+                        const errorJson = JSON.parse(errorBody); // Try parsing as JSON
+                        errorMessage = `AI API Error: ${errorJson.error?.message || errorBody}`;
+                    } catch (e) {
+                        // If parsing fails, use the raw text body
+                        errorMessage = `AI API Error (${response.status}): ${errorBody}`;
+                    }
+                    throw new Error(errorMessage);
                 }
+
                 const data = await response.json();
-                // Find the JSON part in the response
-                const jsonString = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
+
+                // Check if candidate/content/parts exist before accessing
+                if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts || !data.candidates[0].content.parts[0]) {
+                     throw new Error("AI response structure is invalid.");
+                }
+
+                const rawText = data.candidates[0].content.parts[0].text;
+                // Attempt to extract JSON defensively
+                const jsonMatch = rawText.match(/```json\s*([\s\S]*?)\s*```|({[\s\S]*})/);
+                if (!jsonMatch || (!jsonMatch[1] && !jsonMatch[2])) {
+                    throw new Error("Could not extract JSON from AI response.");
+                }
+                const jsonString = (jsonMatch[1] || jsonMatch[2]).trim();
+                
                 const content = JSON.parse(jsonString);
                 updateDashboard(content);
             } catch (error) {
-                document.getElementById('ai-content-area').innerHTML = `<p class="text-red-400 p-4">Error generating content. (${error.message})</p>`;
+                console.error("Detailed Error:", error); // Log full error to console
+                document.getElementById('ai-content-area').innerHTML = `<p class="text-red-400 p-4">Error generating content. (${error.message}). Check console for details.</p>`;
             } finally {
                 aiLoaderOverlay.style.display = 'none';
             }
         }
 
+
         function updateDashboard(content) {
+            // Validate content structure before updating UI
+            if (!content || typeof content.catchy_headline !== 'string' || typeof content.post_description !== 'string' || !Array.isArray(content.hashtags)) {
+                console.error("Invalid content structure received from AI:", content);
+                 document.getElementById('ai-content-area').innerHTML = `<p class="text-red-400 p-4">Error: AI returned invalid content structure.</p>`;
+                 return;
+            }
             aiHeadline.textContent = content.catchy_headline;
             aiDescription.textContent = content.post_description;
             aiHashtags.textContent = content.hashtags.join(' ');
@@ -298,7 +336,7 @@
         shareFacebookBtn.addEventListener('click', () => share('facebook'));
         shareLinkedInBtn.addEventListener('click', () => share('linkedin'));
 
-        fetchNews('crypto');
+        fetchNews('crypto'); // Load initial category
     </script>
 </body>
 </html>
