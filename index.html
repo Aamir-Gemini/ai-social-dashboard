@@ -165,7 +165,6 @@
                 if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
                 const data = await response.json();
                 
-                // Only take the top 3 articles
                 articles = data.items.slice(0, 3);
                 
                 displayNews(articles);
@@ -228,7 +227,13 @@
                 - "post_description": A concise summary for the post (2-3 sentences max).
                 - "hashtags": An array of 5 relevant hashtags for the topic.
             `;
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`;
+            
+            // --- START OF FIX ---
+            // The API endpoint and model name have been updated
+            const modelName = "gemini-1.5-flash"; // Correct, simple model name
+            const url = `https://generativelanguage.googleapis.com/v1/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
+            // --- END OF FIX ---
+            
             try {
                 const response = await fetch(url, {
                     method: 'POST',
@@ -240,6 +245,7 @@
                     throw new Error(`AI API Error: ${errorData.error.message}`);
                 }
                 const data = await response.json();
+                // Find the JSON part in the response
                 const jsonString = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
                 const content = JSON.parse(jsonString);
                 updateDashboard(content);
