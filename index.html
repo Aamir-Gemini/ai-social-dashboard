@@ -131,9 +131,7 @@
         const RSS_FEEDS = {
             crypto: 'https://cointelegraph.com/rss',
             techcrunch: 'https://techcrunch.com/rss',
-            // --- START OF FIX ---
-            arstechnica: 'https://feeds.arstechnica.com/arstechnica/index/' // Updated URL using HTTPS
-            // --- END OF FIX ---
+            arstechnica: 'https://feeds.arstechnica.com/arstechnica/index/'
         };
         // --- END OF CONFIGURATION ---
 
@@ -167,23 +165,14 @@
                 const response = await fetch(apiUrl);
                 if (!response.ok) {
                     let errorText = response.statusText;
-                    try {
-                        const errorJson = await response.json();
-                        errorText = errorJson.message || errorText;
-                    } catch (e) { /* Ignore */ }
+                    try { const errorJson = await response.json(); errorText = errorJson.message || errorText; } catch (e) { /* Ignore */ }
                     throw new Error(`API Error (${response.status}): ${errorText}`);
                 }
                 const data = await response.json();
-
-                if (data.status !== 'ok') {
-                     throw new Error(`rss2json Error: ${data.message || 'Failed to parse feed'}`);
-                }
-
+                if (data.status !== 'ok') { throw new Error(`rss2json Error: ${data.message || 'Failed to parse feed'}`); }
                 articles = data.items.slice(0, 3);
-
                 displayNews(articles);
-            } catch (error)
-            {
+            } catch (error) {
                 newsList.innerHTML = `<p class="text-red-400 p-4">Error fetching news for ${category}. (${error.message})</p>`;
                 console.error("Fetch Error Details:", error);
             } finally {
@@ -193,10 +182,7 @@
 
         function displayNews(newsArticles) {
             newsList.innerHTML = '';
-            if (!newsArticles || newsArticles.length === 0) {
-                 newsList.innerHTML = `<p class="text-slate-400 p-4">No articles found.</p>`;
-                 return;
-            }
+            if (!newsArticles || newsArticles.length === 0) { newsList.innerHTML = `<p class="text-slate-400 p-4">No articles found.</p>`; return; }
             newsArticles.forEach((article, index) => {
                 const articleEl = document.createElement('div');
                 articleEl.className = 'headline-item flex items-center space-x-4 p-3 bg-slate-800 rounded-lg cursor-pointer border-2 border-transparent transition-all duration-300';
@@ -217,9 +203,7 @@
         }
 
         function handleArticleClick(index, element) {
-            if (selectedArticleElement) {
-                selectedArticleElement.classList.remove('selected-article');
-            }
+            if (selectedArticleElement) selectedArticleElement.classList.remove('selected-article');
             element.classList.add('selected-article');
             selectedArticleElement = element;
             currentArticle = articles[index];
@@ -237,31 +221,35 @@
                 Analyze the following news article and generate a social media post for X (formerly Twitter).
                 Article Title: "${title}"
                 Article Content Snippet: "${description}"
-                Provide the output as a clean JSON object with three keys: "catchy_headline", "post_description", and "hashtags".
+                Provide the output as a clean JSON object with three keys: "catchy_headline", "post_description", and "hashtags". Ensure the entire response is ONLY the JSON object, with no extra text before or after.
                 - "catchy_headline": An engaging, short headline for social media.
                 - "post_description": A concise summary for the post (2-3 sentences max).
-                - "hashtags": An array of 5 relevant hashtags for the topic.
+                - "hashtags": An array of 5 relevant hashtags for the topic (e.g., ["#crypto", "#news"]).
             `;
 
-            const modelName = "gemini-1.5-flash-latest";
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
+            // --- START OF STABLE FIX ---
+            const modelName = "gemini-1.5-flash-001"; // Using a specific stable version
+            const url = `https://generativelanguage.googleapis.com/v1/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`; // Using v1 API
+            // --- END OF STABLE FIX ---
 
             try {
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                    body: JSON.stringify({
+                         contents: [{ parts: [{ text: prompt }] }],
+                         // Optional: Add generationConfig if needed for stable API
+                         generationConfig: {
+                              // temperature: 0.7, // Example config
+                              // maxOutputTokens: 256 // Example config
+                         }
+                    })
                 });
 
                 if (!response.ok) {
                     let errorBody = await response.text();
                     let errorMessage = `AI API Error (${response.status}): ${response.statusText}`;
-                    try {
-                        const errorJson = JSON.parse(errorBody);
-                        errorMessage = `AI API Error: ${errorJson.error?.message || errorBody}`;
-                    } catch (e) {
-                         errorMessage = `AI API Error (${response.status}): ${errorBody}`;
-                    }
+                    try { const errorJson = JSON.parse(errorBody); errorMessage = `AI API Error: ${errorJson.error?.message || errorBody}`; } catch (e) { errorMessage = `AI API Error (${response.status}): ${errorBody}`; }
                     throw new Error(errorMessage);
                 }
 
@@ -272,21 +260,22 @@
                 }
 
                 const rawText = data.candidates[0].content.parts[0].text;
+                // Try to find JSON block, otherwise assume the whole text is JSON
+                let jsonString = rawText.trim();
                 const jsonMatch = rawText.match(/```json\s*([\s\S]*?)\s*```|({[\s\S]*})/);
-                if (!jsonMatch || (!jsonMatch[1] && !jsonMatch[2])) {
-                    // Sometimes the model might just return JSON without backticks
-                    try {
-                         JSON.parse(rawText.trim()); // Test if it's valid JSON
-                         jsonString = rawText.trim();
-                    } catch(e) {
-                         throw new Error("Could not extract JSON from AI response.");
-                    }
-                } else {
-                     jsonString = (jsonMatch[1] || jsonMatch[2]).trim();
+                 if (jsonMatch && (jsonMatch[1] || jsonMatch[2])) {
+                    jsonString = (jsonMatch[1] || jsonMatch[2]).trim();
+                 }
+
+                // Final check if parsing is possible
+                let content;
+                try {
+                     content = JSON.parse(jsonString);
+                } catch(e) {
+                     console.error("Failed to parse JSON string:", jsonString);
+                     throw new Error("Could not parse JSON from AI response.");
                 }
 
-
-                const content = JSON.parse(jsonString);
                 updateDashboard(content);
             } catch (error) {
                 console.error("Detailed Error:", error);
@@ -310,23 +299,13 @@
         }
 
         function share(platform) {
-            if (!currentArticle || !currentArticle.link) {
-                alert("Please select an article first.");
-                return;
-            }
+            if (!currentArticle || !currentArticle.link) { alert("Please select an article first."); return; }
             let url = '';
             const text = `${aiHeadline.textContent}\n\n${aiDescription.textContent}\n\n${aiHashtags.textContent}`;
-
             switch(platform) {
-                case 'x':
-                    url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(currentArticle.link)}`;
-                    break;
-                case 'facebook':
-                    url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(currentArticle.link)}&quote=${encodeURIComponent(aiHeadline.textContent + '\n\n' + aiDescription.textContent)}`;
-                    break;
-                case 'linkedin':
-                    url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(currentArticle.link)}`;
-                    break;
+                case 'x': url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(currentArticle.link)}`; break;
+                case 'facebook': url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(currentArticle.link)}&quote=${encodeURIComponent(aiHeadline.textContent + '\n\n' + aiDescription.textContent)}`; break;
+                case 'linkedin': url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(currentArticle.link)}`; break;
             }
             window.open(url, '_blank');
         }
