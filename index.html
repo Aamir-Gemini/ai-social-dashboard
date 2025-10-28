@@ -227,23 +227,16 @@
                 - "hashtags": An array of 5 relevant hashtags for the topic (e.g., ["#crypto", "#news"]).
             `;
 
-            // --- START OF STABLE FIX ---
-            const modelName = "gemini-1.5-flash-001"; // Using a specific stable version
-            const url = `https://generativelanguage.googleapis.com/v1/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`; // Using v1 API
-            // --- END OF STABLE FIX ---
+            // --- START OF STABLE FIX v2 ---
+            const modelName = "gemini-1.5-flash-latest"; // Reverting to latest alias
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${GEMINI_API_KEY}`; // Reverting to v1beta
+            // --- END OF STABLE FIX v2 ---
 
             try {
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                         contents: [{ parts: [{ text: prompt }] }],
-                         // Optional: Add generationConfig if needed for stable API
-                         generationConfig: {
-                              // temperature: 0.7, // Example config
-                              // maxOutputTokens: 256 // Example config
-                         }
-                    })
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) // Removed generationConfig as it might not be needed/supported in v1beta
                 });
 
                 if (!response.ok) {
@@ -260,20 +253,28 @@
                 }
 
                 const rawText = data.candidates[0].content.parts[0].text;
-                // Try to find JSON block, otherwise assume the whole text is JSON
                 let jsonString = rawText.trim();
                 const jsonMatch = rawText.match(/```json\s*([\s\S]*?)\s*```|({[\s\S]*})/);
                  if (jsonMatch && (jsonMatch[1] || jsonMatch[2])) {
                     jsonString = (jsonMatch[1] || jsonMatch[2]).trim();
                  }
 
-                // Final check if parsing is possible
                 let content;
                 try {
                      content = JSON.parse(jsonString);
                 } catch(e) {
                      console.error("Failed to parse JSON string:", jsonString);
-                     throw new Error("Could not parse JSON from AI response.");
+                     // Attempt to find JSON within potential text if parsing failed directly
+                     const nestedJsonMatch = jsonString.match(/{[\s\S]*}/);
+                     if (nestedJsonMatch) {
+                         try {
+                             content = JSON.parse(nestedJsonMatch[0]);
+                         } catch (nestedE) {
+                              throw new Error("Could not parse JSON from AI response even after extraction attempt.");
+                         }
+                     } else {
+                        throw new Error("Could not parse JSON from AI response.");
+                     }
                 }
 
                 updateDashboard(content);
